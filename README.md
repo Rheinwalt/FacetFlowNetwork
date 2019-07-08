@@ -14,14 +14,13 @@ Cython and a C compiler.
 
 ## Usage
 
-This module has on class called *ffn*, and all functionality is
+This module has one class called *ffn*, and all functionality is
 structured inside this class by class methods.
 
 ~~~~~~~~~~~~~~~~~ {.python .numberLines}
 from FacetFlowNetwork import ffn
 help(ffn)
 ~~~~~~~~~~~~~~~~~
-
 
 ## Tutorial
 
@@ -52,6 +51,11 @@ pl.xlabel('x [m]')
 pl.ylabel('y [m]')
 pl.gca().set_aspect('equal')
 pl.savefig('Gauss.pdf')
+~~~~~~~~~~~~~~~~~
+
+![Gaussian hill FFN SCA](tutorial/Gauss.png)
+
+~~~~~~~~~~~~~~~~~ {.python .numberLines}
 
 # store FFN to disk
 G.save('Gauss.hdf')
@@ -83,5 +87,9 @@ The C routines inside this module might crash for large point clouds
 if the stack size on your system is too small. In that case it helps to
 have an unlimited stack for your session:
 
-   ulimit -s unlimited
+    ulimit -s unlimited
 
+## Publication
+
+This software is associated to *A network-based flow accumulation algorithm for point clouds: Facet-Flow Networks (FFN)*,
+Journal of Geophysical  Research: Earth Surface, 2019 ([10.1029/2018JF004827](https://doi.org/10.1029/2018JF004827)). 
