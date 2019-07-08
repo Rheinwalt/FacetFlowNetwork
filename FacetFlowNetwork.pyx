@@ -2,11 +2,6 @@ import sys
 import numpy as np
 from libc.stdlib cimport free
 
-# for LAS file RGB colors
-import matplotlib as mpl
-mpl.use('Agg')
-from matplotlib import pyplot as pl
-
 __version__ = '0.1'
 __author__ = 'Aljoscha Rheinwalt'
 __author_email__ = 'aljoscha.rheinwalt@uni-potsdam.de'
@@ -226,6 +221,14 @@ class ffn:
                     rv[tv[i, k]] = vv[i]
         return r
 
+    def facet_centroids(self):
+        """
+        Return the 3D centroids of the facets
+        """
+        return np.transpose((self.x[self.tri].mean(1),
+                             self.y[self.tri].mean(1),
+                             self.z[self.tri].mean(1)))
+
     def save(self, fname, compr = 'lzf'):
         """
         Save FFN to a compressed HDF file
@@ -251,13 +254,17 @@ class ffn:
         f.create_dataset('flags', data = flags, compression = compr)
         f.close()
 
-    def export(self, fname, var, pnts = None, cmap = pl.cm.magma_r):
+    def export(self, fname, var, pnts = None, cmap = None):
         """
         Export point cloud to LAS file with RGB colors according to var
         """
         import laspy
         import os
         from subprocess import call
+
+        if cmap is None:
+            from matplotlib.cm import magma_r
+            cmap = magma_r
 
         fn, fe = os.path.splitext(fname)
         v = var - np.min(var)

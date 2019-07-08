@@ -1,31 +1,3 @@
-# FacetFlowNetwork
-
-Flow accumulation on TINs of point-cloud data 
-
-## Install
-
-The core of this module is written in C (see main.c). It is
-wrapped by Cython into a Python module, i.e., you will need Python,
-Cython and a C compiler.
-
-    git clone https://github.com/Rheinwalt/FacetFlowNetwork.git
-    cd FacetFlowNetwork
-    sudo python setup.py install
-
-## Usage
-
-This module has on class called *ffn*, and all functionality is
-structured inside this class by class methods.
-
-~~~~~~~~~~~~~~~~~ {.python .numberLines}
-from FacetFlowNetwork import ffn
-help(ffn)
-~~~~~~~~~~~~~~~~~
-
-
-## Tutorial
-
-~~~~~~~~~~~~~~~~~ {.python .numberLines}
 import numpy as np
 from matplotlib import pyplot as pl
 from FacetFlowNetwork import ffn
@@ -75,13 +47,3 @@ G.export('Gauss.las', rgbc, pnts)
 rgbc = G.fatp(G.sca())
 rgbc[rgbc > 1] = 1
 G.export('Gauss_fatp.las', rgbc)
-~~~~~~~~~~~~~~~~~
-
-## Bugs
-
-The C routines inside this module might crash for large point clouds
-if the stack size on your system is too small. In that case it helps to
-have an unlimited stack for your session:
-
-   ulimit -s unlimited
-
