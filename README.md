@@ -53,7 +53,7 @@ pl.gca().set_aspect('equal')
 pl.savefig('Gauss.pdf')
 ~~~~~~~~~~~~~~~~~
 
-![Gaussian hill FFN SCA](tutorial/Gauss.png)
+![Gaussian hill FFN SCA](tutorial/Gauss.png?raw=true "Gaussian hill FFN SCA")
 
 ~~~~~~~~~~~~~~~~~ {.python .numberLines}
 
