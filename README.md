@@ -1,6 +1,6 @@
 # FacetFlowNetwork
 
-Flow accumulation on TINs of point-cloud data 
+Flow accumulation on TINs of point-cloud data by facet flow networks (FFNs).
 
 ## Install
 
@@ -23,6 +23,13 @@ help(ffn)
 ~~~~~~~~~~~~~~~~~
 
 ## Tutorial
+
+First tutorial on synthetic point-cloud data of a Gaussian hill surface.
+It covers the generation of 1000 points on a 1 by 1 meter region of interest,
+FFN construction, specific catchment area (SCA) estimation, visualization,
+input / output of FFNs, and export to LAS files. We recommend
+[displaz](https://github.com/c42f/displaz "a hackable lidar viewer") as a
+LAS file viewer.
 
 ~~~~~~~~~~~~~~~~~ {.python .numberLines}
 import numpy as np
