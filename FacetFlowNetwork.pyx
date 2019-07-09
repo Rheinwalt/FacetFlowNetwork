@@ -39,7 +39,7 @@ class ffn:
                 tri = Delaunay(np.transpose((x-np.mean(x), y-np.mean(y))),
                         qhull_options = 'Qt').simplices.astype('uint32')
             if x is None:
-                sys.exit('error: fname and x both not specified!')
+                sys.exit('error: fname and x are both not specified!')
 
             self.x = np.array(x)
             self.y = np.array(y)
@@ -229,7 +229,7 @@ class ffn:
                              self.y[self.tri].mean(1),
                              self.z[self.tri].mean(1)))
 
-    def save(self, fname, compr = 'lzf'):
+    def save(self, fname, compr = 'gzip', copts = 9):
         """
         Save FFN to a compressed HDF file
         """
@@ -238,20 +238,20 @@ class ffn:
 
         fn, fe = os.path.splitext(fname)
         f = File('%s.hdf' % fn, 'w')
-        f.create_dataset('x', data = self.x, compression = compr)
-        f.create_dataset('y', data = self.y, compression = compr)
-        f.create_dataset('z', data = self.z, compression = compr)
-        f.create_dataset('tri', data = self.tri, compression = compr)
-        f.create_dataset('net', data = self.net, compression = compr)
-        f.create_dataset('w', data = self.w, compression = compr)
-        f.create_dataset('a', data = self.a, compression = compr)
-        f.create_dataset('d', data = self.d, compression = compr)
-        f.create_dataset('aspect', data = self.aspect, compression = compr)
-        f.create_dataset('slope', data = self.slope, compression = compr)
-        flags = np.zeros(2)
+        f.create_dataset('x', data = self.x, compression = compr, compression_opts = copts)
+        f.create_dataset('y', data = self.y, compression = compr, compression_opts = copts)
+        f.create_dataset('z', data = self.z, compression = compr, compression_opts = copts)
+        f.create_dataset('tri', data = self.tri, compression = compr, compression_opts = copts)
+        f.create_dataset('net', data = self.net, compression = compr, compression_opts = copts)
+        f.create_dataset('w', data = self.w, compression = compr, compression_opts = copts)
+        f.create_dataset('a', data = self.a, compression = compr, compression_opts = copts)
+        f.create_dataset('d', data = self.d, compression = compr, compression_opts = copts)
+        f.create_dataset('aspect', data = self.aspect, compression = compr, compression_opts = copts)
+        f.create_dataset('slope', data = self.slope, compression = compr, compression_opts = copts)
+        flags = np.zeros(2, dtype = 'int')
         if self.tunneled:
             flags[0] = 1
-        f.create_dataset('flags', data = flags, compression = compr)
+        f.create_dataset('flags', data = flags, compression = compr, compression_opts = copts)
         f.close()
 
     def export(self, fname, var, pnts = None, cmap = None):
