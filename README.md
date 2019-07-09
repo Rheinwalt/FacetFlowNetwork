@@ -200,7 +200,7 @@ pl.gca().set_aspect('equal')
 pl.savefig('Alluvial_fan_sca.pdf')
 ~~~~~~~~~~~~~~~~~
 
-![Alluvial fan point cloud FFN SCA estimate](tutorial/Alluvial_fan.png?raw=true "FFN SCA estimate")
+![Alluvial fan point cloud FFN SCA estimate](tutorial/Alluvial_fan_sca.png?raw=true "FFN SCA estimate")
 
 ~~~~~~~~~~~~~~~~~ {.python .numberLines}
 # detailed map view of SCA with gouraud shading
@@ -226,7 +226,7 @@ pl.gca().set_aspect('equal')
 pl.savefig('Alluvial_fan_sca_gouraud.pdf')
 ~~~~~~~~~~~~~~~~~
 
-![Alluvial fan point cloud FFN SCA estimate](tutorial/Alluvial_fan_gouraud.png?raw=true "FFN SCA estimate with gouraud shading")
+![Alluvial fan point cloud FFN SCA estimate](tutorial/Alluvial_fan_sca_gouraud.png?raw=true "FFN SCA estimate with gouraud shading")
   
 ## Bugs
 
