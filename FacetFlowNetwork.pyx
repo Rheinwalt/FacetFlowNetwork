@@ -16,6 +16,14 @@ cdef extern from "main.c":
     void linkthroughput(double *ltp,
             const unsigned int *net, const double *w, const double *a,
             const unsigned int m)
+    void convergence(double *conv, const double *sca, const double *xf, const double *yf,
+            const unsigned int *net, const unsigned int *rev,
+            const unsigned int *sub, const unsigned int slen,
+            const unsigned int m, const unsigned int n,
+            const double dthresh, const unsigned int nummin)
+    void rivers(unsigned int *ind, const double *sca,
+            const unsigned int *net, const unsigned int *rev,
+            const unsigned int m, const double fac)
     unsigned int * upstreamnetwork(const unsigned int *net,
             const unsigned int m, unsigned int *l)
 
@@ -228,6 +236,50 @@ class ffn:
         return np.transpose((self.x[self.tri].mean(1),
                              self.y[self.tri].mean(1),
                              self.z[self.tri].mean(1)))
+
+    def river_network(self, scafactor = 0.9, seedperc = 99):
+        """
+        Return river network facets
+        """
+        cdef double[:] av
+        cdef unsigned int[:, :] nv
+        cdef unsigned int[:] rv, iv
+
+        ind = np.zeros(self.m, dtype = 'uint32')
+        iv = ind
+        av = np.log10(self.sca())
+        ind[self.sca() > np.percentile(self.sca(), seedperc)] = 1
+        nv = self.net
+        rv = self.upstream()
+        rivers(&iv[0], &av[0], &nv[0,0], &rv[0],
+               self.m, scafactor)
+        return np.arange(self.m, dtype = 'uint32')[ind > 0]
+
+    def facet_flow_convergence(self, radius = 1, nummin = 10, subset = None):
+        """
+        Facet flow convergence in terms of SCA changes along FFN links
+        """
+        cdef double[:] cv, av, xv, yv
+        cdef unsigned int[:, :] nv
+        cdef unsigned int[:] rv, sv
+
+        if subset is None:
+            subset = np.arange(self.m, dtype = 'uint32')
+        else:
+            subset = np.asanyarray(subset, dtype = 'uint32')
+
+        conv = np.ones(self.m) * np.nan
+        cv = conv
+        sv = subset
+        av = np.log10(self.sca())
+        xv = self.x[self.tri].mean(1)
+        yv = self.y[self.tri].mean(1)
+        nv = self.net
+        rv = self.upstream()
+        convergence(&cv[0], &av[0], &xv[0], &yv[0], &nv[0,0], &rv[0],
+                    &sv[0], len(subset),
+                    self.m, self.n, radius*radius, nummin)
+        return conv
 
     def save(self, fname, compr = 'gzip', copts = 9):
         """

@@ -624,3 +624,201 @@ tunnel(unsigned int *spx, double *spw, double *spa,
         }
     }
 }
+
+void
+rivers(unsigned int *ind, const double *sca,
+       const unsigned int *net, const unsigned int *rev,
+       const unsigned int m, const double fac) {
+    unsigned int i, j, k;
+    Queue *que;
+    double nl;
+
+    que = malloc(sizeof(Queue));
+    if(!que)
+	exit(EXIT_FAILURE);
+    que->first = que->last = NULL;
+    for(i = 0; i < m; i++) {
+	if(ind[i])
+	    if(put(que, i, 0))
+		exit(EXIT_FAILURE);
+    }
+    while(!get(que, &i, &nl)) {
+	for(j = rev[i]; j < rev[i+1]; j++) {
+	    k = rev[j];
+	    if(ind[k])
+		continue;
+	    if(sca[k] < sca[i]*fac)
+		continue;
+	    ind[k] = 1;
+	    if(put(que, k, 0))
+                exit(EXIT_FAILURE);
+	}
+    }
+    free(que);
+}
+
+void
+convergence(double *conv, const double *sca,
+            const double *xf, const double *yf,
+            const unsigned int *net, const unsigned int *rev,
+	    const unsigned int *sub, const unsigned int slen,
+            const unsigned int m, const unsigned int n,
+	    const double dthresh, const unsigned int nummin) {
+    unsigned int i, j, k, l, s, t;
+    unsigned int ldtr, lutr, td, tu;
+    double qoff, qdia, sum, wgh, ak, aj;
+    double xfi, yfi, dx, dy, nl;
+    Queue *que;
+    unsigned int *dtr, *utr, *seen, *mask;
+
+    mask = calloc(m, sizeof(unsigned int));
+    if(!mask)
+	exit(EXIT_FAILURE);
+#pragma omp parallel for private(s)
+    for(s = 0; s < slen; s++)
+	mask[sub[s]] = 1;
+
+#pragma omp parallel for private(i)
+    for(i = 0; i < m; i++) {
+	if(mask[i])
+	    mask[i] = 0;
+	else
+	    mask[i] = 1;
+    }
+
+#pragma omp parallel for private(i,j,k,l,s,t,ldtr,lutr,td,tu,ak,aj,qoff,qdia,sum,wgh,xfi,yfi,dx,dy,nl,que,dtr,utr,seen)
+    for(s = 0; s < slen; s++) {
+	// downstream window
+	i = sub[s];
+	ldtr = 10;
+	td = 0;
+	seen = malloc(m * sizeof(unsigned int));
+	que = malloc(sizeof(Queue));
+	dtr = malloc(ldtr * sizeof(unsigned int));
+	if(!que || !seen || !dtr)
+	    exit(EXIT_FAILURE);
+	memcpy(seen, mask, m * sizeof(unsigned int));
+        que->first = que->last = NULL;
+	if(put(que, i, 0))
+	    exit(EXIT_FAILURE);
+	xfi = xf[i];
+	yfi = yf[i];
+	seen[i] = 1;
+	while(!get(que, &j, &nl)) {
+            for(l = 0; l < 2; l++) {
+                k = net[l+j*2];
+		if(k == m)
+		    continue;
+		if(seen[k])
+		    continue;
+		seen[k] = 1;
+		dx = xf[k] - xfi;
+		dy = yf[k] - yfi;
+		if(dx*dx+dy*dy > dthresh)
+		    continue;
+                if(put(que, k, 0))
+                    exit(EXIT_FAILURE);
+		dtr[td++] = k;
+		if(ldtr <= td) {
+		    ldtr *= 2;
+		    dtr = realloc(dtr, ldtr * sizeof(unsigned int));
+		    if(!dtr)
+			exit(EXIT_FAILURE);
+		}
+	    }
+	}
+	free(que);
+	free(seen);
+	if(td < nummin) {
+	    conv[i] = NAN;
+	    free(dtr);
+	    continue;
+	}
+	dtr = realloc(dtr, td * sizeof(unsigned int));
+	if(!dtr)
+	    exit(EXIT_FAILURE);
+
+	// upstream window
+	lutr = 10;
+	tu = 0;
+	seen = malloc(m * sizeof(unsigned int));
+	que = malloc(sizeof(Queue));
+	utr = malloc(lutr * sizeof(unsigned int));
+	if(!que || !seen || !utr)
+	    exit(EXIT_FAILURE);
+	memcpy(seen, mask, m * sizeof(unsigned int));
+        que->first = que->last = NULL;
+	if(put(que, i, 0))
+	    exit(EXIT_FAILURE);
+	seen[i] = 1;
+	while(!get(que, &j, &nl)) {
+            for(l = rev[j]; l < rev[j+1]; l++) {
+                k = rev[l];
+		if(seen[k])
+		    continue;
+		seen[k] = 1;
+		dx = xf[k] - xfi;
+		dy = yf[k] - yfi;
+		if(dx*dx+dy*dy > dthresh)
+		    continue;
+                if(put(que, k, 0))
+                    exit(EXIT_FAILURE);
+		utr[tu++] = k;
+		if(lutr <= tu) {
+		    lutr *= 2;
+		    utr = realloc(utr, lutr * sizeof(unsigned int));
+		    if(!utr)
+			exit(EXIT_FAILURE);
+		}
+	    }
+	}
+	free(que);
+	free(seen);
+	if(tu < nummin) {
+	    conv[i] = NAN;
+	    free(dtr);
+	    free(utr);
+	    continue;
+	}
+	utr = realloc(utr, tu * sizeof(unsigned int));
+	if(!utr)
+	    exit(EXIT_FAILURE);
+	sum = 0;
+	wgh = 0;
+	for(l = 1; l < td; l++) {
+	    ak = sca[dtr[l]];
+	    for(t = 0; t < l; t++) {
+		aj = sca[dtr[t]];
+		sum += ak * aj * abs(ak - aj);
+		wgh += ak * aj;
+	    }
+	}
+	qdia = sum / wgh;
+	sum = 0;
+	wgh = 0;
+	for(l = 1; l < tu; l++) {
+	    ak = sca[utr[l]];
+	    for(t = 0; t < l; t++) {
+		aj = sca[utr[t]];
+		sum += ak * aj * abs(ak - aj);
+		wgh += ak * aj;
+	    }
+	}
+	qdia += sum / wgh;
+	qdia /= 2;
+	sum = 0;
+	wgh = 0;
+	for(l = 0; l < tu; l++) {
+	    ak = sca[utr[l]];
+	    for(t = 0; t < td; t++) {
+		aj = sca[dtr[t]];
+		sum += ak * aj * abs(ak - aj);
+		wgh += ak * aj;
+	    }
+	}
+	qoff = sum / wgh;
+	conv[i] = qoff - qdia;
+	free(dtr);
+	free(utr);
+    }
+}
