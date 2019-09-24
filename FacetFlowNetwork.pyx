@@ -16,11 +16,10 @@ cdef extern from "main.c":
     void linkthroughput(double *ltp,
             const unsigned int *net, const double *w, const double *a,
             const unsigned int m)
-    void convergence(double *conv, const double *sca, const double *xf, const double *yf,
+    void convergence(double *conv, const double *sca,
             const unsigned int *net, const unsigned int *rev,
             const unsigned int *sub, const unsigned int slen,
-            const unsigned int m, const unsigned int n,
-            const double dthresh, const unsigned int nummin)
+            const unsigned int m, const unsigned int nsamples)
     void rivers(unsigned int *ind, const double *sca,
             const unsigned int *net, const unsigned int *rev,
             const unsigned int m, const double fac)
@@ -208,7 +207,9 @@ class ffn:
             for k in range(3):
                 rv[tv[i, k]] += vv[i]
                 cv[tv[i, k]] += 1
-        return r / c
+        r /= c
+        r[c == 0] = np.nan
+        return r
 
     def fmtp(self, var):
         """
@@ -255,13 +256,18 @@ class ffn:
                self.m, scafactor)
         return np.arange(self.m, dtype = 'uint32')[ind > 0]
 
-    def facet_flow_convergence(self, radius = 1, nummin = 10, subset = None):
+    def facet_flow_convergence(self, var = None, nsamples = 10, subset = None):
         """
         Facet flow convergence in terms of SCA changes along FFN links
         """
-        cdef double[:] cv, av, xv, yv
+        cdef double[:] cv, av
         cdef unsigned int[:, :] nv
         cdef unsigned int[:] rv, sv
+
+        if var is None:
+            av = np.log10(self.sca())
+        else:
+            av = var
 
         if subset is None:
             subset = np.arange(self.m, dtype = 'uint32')
@@ -271,14 +277,11 @@ class ffn:
         conv = np.ones(self.m) * np.nan
         cv = conv
         sv = subset
-        av = np.log10(self.sca())
-        xv = self.x[self.tri].mean(1)
-        yv = self.y[self.tri].mean(1)
         nv = self.net
         rv = self.upstream()
-        convergence(&cv[0], &av[0], &xv[0], &yv[0], &nv[0,0], &rv[0],
+        convergence(&cv[0], &av[0], &nv[0,0], &rv[0],
                     &sv[0], len(subset),
-                    self.m, self.n, radius*radius, nummin)
+                    self.m, nsamples)
         return conv
 
     def save(self, fname, compr = 'gzip', copts = 9):

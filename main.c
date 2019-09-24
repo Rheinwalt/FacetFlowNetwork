@@ -659,15 +659,11 @@ rivers(unsigned int *ind, const double *sca,
 
 void
 convergence(double *conv, const double *sca,
-            const double *xf, const double *yf,
             const unsigned int *net, const unsigned int *rev,
 	    const unsigned int *sub, const unsigned int slen,
-            const unsigned int m, const unsigned int n,
-	    const double dthresh, const unsigned int nummin) {
-    unsigned int i, j, k, l, s, t;
-    unsigned int ldtr, lutr, td, tu;
-    double qoff, qdia, sum, wgh, ak, aj;
-    double xfi, yfi, dx, dy, nl;
+            const unsigned int m, const unsigned int nsamples) {
+    unsigned int i, j, k, l, s, t, d;
+    double qoff, qdia, sum, wgh, ak, aj, nl;
     Queue *que;
     unsigned int *dtr, *utr, *seen, *mask;
 
@@ -686,24 +682,21 @@ convergence(double *conv, const double *sca,
 	    mask[i] = 1;
     }
 
-#pragma omp parallel for private(i,j,k,l,s,t,ldtr,lutr,td,tu,ak,aj,qoff,qdia,sum,wgh,xfi,yfi,dx,dy,nl,que,dtr,utr,seen)
+#pragma omp parallel for private(i,j,k,l,s,t,d,ak,aj,qoff,qdia,sum,wgh,nl,que,dtr,utr,seen)
     for(s = 0; s < slen; s++) {
 	// downstream window
 	i = sub[s];
-	ldtr = 10;
-	td = 0;
 	seen = malloc(m * sizeof(unsigned int));
 	que = malloc(sizeof(Queue));
-	dtr = malloc(ldtr * sizeof(unsigned int));
+	dtr = malloc(nsamples * sizeof(unsigned int));
 	if(!que || !seen || !dtr)
 	    exit(EXIT_FAILURE);
 	memcpy(seen, mask, m * sizeof(unsigned int));
         que->first = que->last = NULL;
 	if(put(que, i, 0))
 	    exit(EXIT_FAILURE);
-	xfi = xf[i];
-	yfi = yf[i];
 	seen[i] = 1;
+	d = 0;
 	while(!get(que, &j, &nl)) {
             for(l = 0; l < 2; l++) {
                 k = net[l+j*2];
@@ -712,38 +705,26 @@ convergence(double *conv, const double *sca,
 		if(seen[k])
 		    continue;
 		seen[k] = 1;
-		dx = xf[k] - xfi;
-		dy = yf[k] - yfi;
-		if(dx*dx+dy*dy > dthresh)
-		    continue;
                 if(put(que, k, 0))
                     exit(EXIT_FAILURE);
-		dtr[td++] = k;
-		if(ldtr <= td) {
-		    ldtr *= 2;
-		    dtr = realloc(dtr, ldtr * sizeof(unsigned int));
-		    if(!dtr)
-			exit(EXIT_FAILURE);
+		dtr[d++] = k;
+		if(d == nsamples) {
+		    while(!get(que, &j, &nl));
+		    break;
 		}
 	    }
 	}
 	free(que);
 	free(seen);
-	if(td < nummin) {
+	if(d < nsamples) {
 	    conv[i] = NAN;
 	    free(dtr);
 	    continue;
 	}
-	dtr = realloc(dtr, td * sizeof(unsigned int));
-	if(!dtr)
-	    exit(EXIT_FAILURE);
-
 	// upstream window
-	lutr = 10;
-	tu = 0;
 	seen = malloc(m * sizeof(unsigned int));
 	que = malloc(sizeof(Queue));
-	utr = malloc(lutr * sizeof(unsigned int));
+	utr = malloc(nsamples * sizeof(unsigned int));
 	if(!que || !seen || !utr)
 	    exit(EXIT_FAILURE);
 	memcpy(seen, mask, m * sizeof(unsigned int));
@@ -751,69 +732,57 @@ convergence(double *conv, const double *sca,
 	if(put(que, i, 0))
 	    exit(EXIT_FAILURE);
 	seen[i] = 1;
+	d = 0;
 	while(!get(que, &j, &nl)) {
             for(l = rev[j]; l < rev[j+1]; l++) {
                 k = rev[l];
 		if(seen[k])
 		    continue;
 		seen[k] = 1;
-		dx = xf[k] - xfi;
-		dy = yf[k] - yfi;
-		if(dx*dx+dy*dy > dthresh)
-		    continue;
                 if(put(que, k, 0))
                     exit(EXIT_FAILURE);
-		utr[tu++] = k;
-		if(lutr <= tu) {
-		    lutr *= 2;
-		    utr = realloc(utr, lutr * sizeof(unsigned int));
-		    if(!utr)
-			exit(EXIT_FAILURE);
+		utr[d++] = k;
+		if(d == nsamples) {
+		    while(!get(que, &j, &nl));
+		    break;
 		}
 	    }
 	}
 	free(que);
 	free(seen);
-	if(tu < nummin) {
+	if(d < nsamples) {
 	    conv[i] = NAN;
 	    free(dtr);
 	    free(utr);
 	    continue;
 	}
-	utr = realloc(utr, tu * sizeof(unsigned int));
-	if(!utr)
-	    exit(EXIT_FAILURE);
 	sum = 0;
 	wgh = 0;
-	for(l = 1; l < td; l++) {
+	for(l = 1; l < d; l++) {
 	    ak = sca[dtr[l]];
 	    for(t = 0; t < l; t++) {
 		aj = sca[dtr[t]];
-		sum += ak * aj * abs(ak - aj);
-		wgh += ak * aj;
+		sum += abs(ak - aj);
+		wgh += 1;
+	    }
+	}
+	for(l = 1; l < d; l++) {
+	    ak = sca[utr[l]];
+	    for(t = 0; t < l; t++) {
+		aj = sca[utr[t]];
+		sum += abs(ak - aj);
+		wgh += 1;
 	    }
 	}
 	qdia = sum / wgh;
 	sum = 0;
 	wgh = 0;
-	for(l = 1; l < tu; l++) {
+	for(l = 0; l < d; l++) {
 	    ak = sca[utr[l]];
-	    for(t = 0; t < l; t++) {
-		aj = sca[utr[t]];
-		sum += ak * aj * abs(ak - aj);
-		wgh += ak * aj;
-	    }
-	}
-	qdia += sum / wgh;
-	qdia /= 2;
-	sum = 0;
-	wgh = 0;
-	for(l = 0; l < tu; l++) {
-	    ak = sca[utr[l]];
-	    for(t = 0; t < td; t++) {
+	    for(t = 0; t < d; t++) {
 		aj = sca[dtr[t]];
-		sum += ak * aj * abs(ak - aj);
-		wgh += ak * aj;
+		sum += abs(ak - aj);
+		wgh += 1;
 	    }
 	}
 	qoff = sum / wgh;
