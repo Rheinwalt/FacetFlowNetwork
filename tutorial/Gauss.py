@@ -17,7 +17,8 @@ G = ffn(x, y, z)
 
 # visualize the specific catchment area (SCA) for each facet of the FFN
 pl.title('Gaussian hill FFN SCA estimate')
-pl.tripcolor(x, y, G.tri, facecolors = G.sca(), vmax = 1)
+pl.tripcolor(x, y, G.tri, facecolors = G.sca(),
+    vmax = 1, cmap = pl.cm.viridis_r)
 cb = pl.colorbar()
 cb.set_label('SCA [m]')
 pl.xlabel('x [m]')

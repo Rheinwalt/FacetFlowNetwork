@@ -22,7 +22,9 @@ from FacetFlowNetwork import ffn
 help(ffn)
 ~~~~~~~~~~~~~~~~~
 
-## Tutorial
+## Tutorials
+
+### Synthetic point cloud for a Gaussian hill
 
 First, a tutorial on synthetic point-cloud data of a Gaussian hill surface.
 It covers the generation of 1000 points on a 1 by 1 meter region of interest,
@@ -51,7 +53,8 @@ G = ffn(x, y, z)
 
 # visualize the specific catchment area (SCA) for each facet of the FFN
 pl.title('Gaussian hill FFN SCA estimate')
-pl.tripcolor(x, y, G.tri, facecolors = G.sca(), vmax = 1)
+pl.tripcolor(x, y, G.tri, facecolors = G.sca(),
+        vmax = 1, cmap = pl.cm.viridis_r)
 cb = pl.colorbar()
 cb.set_label('SCA [m]')
 pl.xlabel('x [m]')
@@ -87,6 +90,8 @@ rgbc = G.fatp(G.sca())
 rgbc[rgbc > 1] = 1
 G.export('Gauss_fatp.las', rgbc)
 ~~~~~~~~~~~~~~~~~
+
+### Lidar point cloud
 
 Second, a tutorial with lidar point cloud data from
 [Opentopography](https://opentopography.org). Here, we
@@ -227,7 +232,77 @@ pl.savefig('Alluvial_fan_sca_gouraud.pdf')
 ~~~~~~~~~~~~~~~~~
 
 ![Alluvial fan point cloud FFN SCA estimate](tutorial/Alluvial_fan_sca_gouraud.png?raw=true "FFN SCA estimate with gouraud shading")
-  
+
+### Gridded digital elevation model (DEM)
+
+There is a second class similar to *ffn* that reads a DEM instead of a point
+cloud:
+
+~~~~~~~~~~~~~~~~~ {.python .numberLines}
+from FacetFlowNetwork import demffn
+~~~~~~~~~~~~~~~~~
+
+Generating a simple Gaussian hill DEM,
+
+~~~~~~~~~~~~~~~~~ {.python .numberLines}
+pixelwidth = 0.01
+
+# grid axes
+xr = np.arange(-1.5, 1.5, pixelwidth)
+yr = np.arange(-1.3, 1.3, pixelwidth)
+
+# (x, y) coordinates for grid cells
+x, y = np.meshgrid(xr, yr)
+
+# Gaussian hill DEM
+r = np.sqrt(x*x + y*y)
+dem = np.exp(-r*r)
+~~~~~~~~~~~~~~~~~
+
+we can compute the FFN for that DEM with the corresponding class:
+
+~~~~~~~~~~~~~~~~~ {.python .numberLines}
+F = demffn(dem, pixelwidth)
+~~~~~~~~~~~~~~~~~
+
+We can visualize the SCA for that FFN as a raster with imshow:
+
+~~~~~~~~~~~~~~~~~ {.python .numberLines}
+sca = f.fatp(f.sca())
+sca.shape = dem.shape
+
+pl.figure(1, (19.2, 10.8))
+im = pl.imshow(sca, origin = 'lower',
+        interpolation = 'none', extent = [0,1.5,0,1.3],
+        cmap = pl.cm.viridis_r,
+        vmin = 0, vmax = tsca.max())
+cb = pl.colorbar()
+cb.set_label('SCA [m]')
+pl.show()
+~~~~~~~~~~~~~~~~~ 
+
+![Gaussian hill DEM FFN SCA](tutorial/Gauss_demffn_sca.png?raw=true "Gaussian hill DEM FFN SCA")
+
+The grid effects can also be quantified by the relative differences
+between the numerical SCA estimates and the theoretical SCA for a
+Gaussian hill:
+
+~~~~~~~~~~~~~~~~~ {.python .numberLines}
+# theoretical SCA
+tsca = r / 2.0
+
+pl.figure(1, (19.2, 10.8))
+im = pl.imshow(100*(sca-tsca)/tsca, origin = 'lower',
+        interpolation = 'none', extent = [0,1.5,0,1.3],
+        cmap = pl.cm.bwr,
+        vmin = -25, vmax = 25)
+cb = pl.colorbar()
+cb.set_label(r'Relative SCA error [%]')
+pl.show()
+~~~~~~~~~~~~~~~~~
+
+![Gaussian hill DEM FFN SCA relative error](tutorial/Gauss_demffn_sca_error.png?raw=true "Gaussian hill DEM FFN SCA relative error")
+
 ## Bugs
 
 The C routines inside this module might crash for large point clouds

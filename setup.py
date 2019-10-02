@@ -6,7 +6,6 @@ import numpy
 ext_modules = [Extension('FacetFlowNetwork',
                         ['FacetFlowNetwork.pyx'],
                         include_dirs = [numpy.get_include()],
-                        #extra_compile_args=['-ggdb', '-O0', '-fopenmp'],
                         extra_compile_args = ['-fopenmp'],
                         extra_link_args = ['-lgomp'],
                         )]

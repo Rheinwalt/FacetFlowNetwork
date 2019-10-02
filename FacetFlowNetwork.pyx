@@ -353,3 +353,20 @@ class ffn:
         except:
             pass
 
+class demffn(ffn):
+    """
+    Facet flow network class for gridded digital elevation models (dems)
+    """
+    def __init__(self, dem, pixelwidth = 1, fname = None,
+                 tunneling = True, tunnelmaxlen = 100):
+        if fname is None:
+            y = np.arange(0, dem.shape[0] * pixelwidth, pixelwidth, dtype = 'float64')
+            x = np.arange(0, dem.shape[1] * pixelwidth, pixelwidth, dtype = 'float64')
+            x, y = np.meshgrid(x, y)
+            x, y, z = x.ravel(), y.ravel(), dem.ravel()
+        else:
+            x, y, z = None, None, None
+
+        super().__init__(x = x, y = y, z = z, tri = None, fname = fname,
+            tunneling = tunneling, tunnelmaxlen = tunnelmaxlen)
+
